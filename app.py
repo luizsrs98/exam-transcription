@@ -1,72 +1,41 @@
+import openai
 import streamlit as st
-import re
 
-# Função para processar os dados dos exames (removendo unidades de medida e valores de referência)
-def process_exams(data):
-    # Exames que você solicitou
-    exams = [
-        "ALBUMINA",
-        "CREATININA",
-        "UREIA",
-        "CÁLCIO",
-        "POTÁSSIO",
-        "MAGNÉSIO",
-        "Hemácias",
-        "Hemoglobina",
-        "Hematócrito",
-        "VCM",
-        "HCM",
-        "CHCM",
-        "RDW-CV",
-        "Leucócitos",
-        "Neutrófilos",
-        "Eosinófilos",
-        "Basófilos",
-        "Monócitos",
-        "Linfócitos",
-        "Exame Qualitativo de Urina"
-    ]
+# Substitua pela sua chave da API do OpenAI
+openai.api_key = "SUA_CHAVE_DE_API_AQUI"
 
-    results = {}
-
-    # Usando expressões regulares para capturar o nome do exame e o resultado, sem as unidades de medida e valores de referência
-    for exam in exams:
-        # A regex captura o nome do exame e o resultado, ignorando as faixas de referência
-        pattern = re.compile(r"({}.*?Resultado: (.*?)(?:\s|$))".format(exam), re.DOTALL)
-        match = re.search(pattern, data)
-        if match:
-            exam_name = match.group(1).strip()  # Nome do exame
-            result = match.group(2).strip()  # Resultado do exame
-            
-            # Remove unidades de medida
-            result = re.sub(r'[a-zA-Z/ ]+', '', result).strip()
-
-            # Armazenando o nome do exame e seu resultado
-            results[exam_name] = result
+# Função para enviar os dados para o ChatGPT e obter a resposta
+def analyze_with_chatgpt(text_input):
+    prompt = f"Por favor, analise os seguintes dados laboratoriais e forneça uma interpretação detalhada:\n{text_input}"
     
-    # Formatação final: criando uma string única para exibir os resultados
-    formatted_results = "\n".join([f"{exam}: {result}" for exam, result in results.items()])
-    return formatted_results
+    try:
+        response = openai.Completion.create(
+            engine="text-davinci-003",  # Ou outro modelo de sua preferência
+            prompt=prompt,
+            max_tokens=500,
+            temperature=0.7
+        )
+        return response.choices[0].text.strip()  # Retorna a resposta gerada pelo ChatGPT
+    except Exception as e:
+        return f"Erro ao chamar o ChatGPT: {str(e)}"
 
 # Função principal para o aplicativo Streamlit
 def main():
-    st.title("Transcrição de Exames Laboratoriais")
+    st.title("Análise de Dados Laboratoriais com ChatGPT")
     
-    # Criando área para inserção do texto com os dados do exame
-    st.write("Cole os dados brutos do exame abaixo:")
+    # Criando área para inserção do texto bruto
+    st.write("Cole os dados brutos dos exames abaixo:")
     data_input = st.text_area("Dados do Exame", height=300)
     
-    if st.button("Processar Exame"):
+    if st.button("Enviar para Análise"):
         if data_input:
-            # Processar os dados do exame e exibir o resultado formatado
-            formatted_results = process_exams(data_input)
-            if formatted_results:
-                st.write("Exames Processados:")
-                st.text(formatted_results)
-            else:
-                st.write("Nenhum exame encontrado ou dados no formato errado.")
+            # Enviar os dados para o ChatGPT e obter a análise
+            analysis = analyze_with_chatgpt(data_input)
+            
+            st.write("Análise do ChatGPT:")
+            st.text(analysis)
         else:
-            st.write("Por favor, insira os dados do exame.")
+            st.write("Por favor, insira os dados dos exames.")
 
 if __name__ == "__main__":
     main()
